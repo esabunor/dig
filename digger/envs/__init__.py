@@ -1,1 +1,1 @@
-from dig.digger.envs.digger_env import DiggerEnv
+from digger.envs.digger_env import DiggerEnv

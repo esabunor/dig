@@ -1,0 +1,7 @@
+README.md
+setup.py
+digger.egg-info/PKG-INFO
+digger.egg-info/SOURCES.txt
+digger.egg-info/dependency_links.txt
+digger.egg-info/requires.txt
+digger.egg-info/top_level.txt
