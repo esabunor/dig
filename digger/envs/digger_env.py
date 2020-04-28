@@ -15,7 +15,7 @@ MAX_VOLUME = 1000
 class DiggerEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, df):
+    def __init__(self, df=None):
         self.df = df
         self.balance = INITIAL_ACCOUNT_BALANCE
         self.nav = INITIAL_ACCOUNT_BALANCE
