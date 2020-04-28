@@ -1,6 +1,6 @@
 from setuptools import setup
 
 setup(name='digger',
-    version = '0.1',
-    install_requires = ['gym', 'numpy']
+    version = '0.2',
+    install_requires = ['gym', 'numpy', 'pandas']
 )
