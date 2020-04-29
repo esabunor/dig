@@ -39,12 +39,22 @@ class DiggerEnv(gym.Env):
         self.current_step += 1
         if self.current_step > len(self.df.loc[:, 'Open'].values) - MAX_STEPS:
             self.current_step = MAX_STEPS
-        delay_modifier = ((self.current_step - MAX_STEPS)/ 6000000)
+        delay_modifier = ((self.current_step - MAX_STEPS)/ 600000000)
 
         reward = self.balance * delay_modifier
         done = self.nav <= 0
         obs = self._next_observation()
-        return obs, reward, done, {'current_step': self.current_step, 'delay_modifier': delay_modifier, 'reward': reward, 'balance': self.balance}
+        info = {
+            'current_step': self.current_step,
+            'delay_modifier': delay_modifier,
+            'reward': reward,
+            'balance': self.balance,
+            'position_size': self.position_size,
+            'nav': self.nav,
+            'unrealizedPL': self.unrealizedPL,
+            'buy_price': self.buy_price
+        }
+        return obs, reward, done, info
 
     def _take_action(self, action):
         # Set the current price to a random price within the time step
