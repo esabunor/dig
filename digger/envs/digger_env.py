@@ -140,6 +140,6 @@ class DiggerEnv(gym.Env):
                 self.position_size / MAX_ACCOUNT_BALANCE * 100,
                 self.buy_price / MAX_CURRENCY_PRICE
             ]),
-            np.zeros(86393))
+            np.zeros(993))
         )], axis=0)
         return obs
