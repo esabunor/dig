@@ -39,7 +39,7 @@ class DiggerEnv(gym.Env):
         self.current_step += 1
         if self.current_step > len(self.df.loc[:, 'Open'].values) - MAX_STEPS:
             self.current_step = MAX_STEPS
-        delay_modifier = ((self.current_step - MAX_STEPS)/ MAX_STEPS)
+        delay_modifier = ((self.current_step - MAX_STEPS)/ 6000000)
 
         reward = self.balance * delay_modifier
         done = self.nav <= 0
