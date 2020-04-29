@@ -44,7 +44,7 @@ class DiggerEnv(gym.Env):
         reward = self.balance * delay_modifier
         done = self.nav <= 0
         obs = self._next_observation()
-        return obs, reward, done, {}
+        return obs, reward, done, {'current_step': self.current_step, 'delay_modifier': delay_modifier, 'reward': reward, 'balance': self.balance}
 
     def _take_action(self, action):
         # Set the current price to a random price within the time step
