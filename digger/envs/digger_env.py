@@ -122,7 +122,9 @@ class DiggerEnv(gym.Env):
         obs = np.append(frame, [[
             self.balance / MAX_ACCOUNT_BALANCE,
             self.max_nav / MAX_ACCOUNT_BALANCE,
+            self.nav / MAX_ACCOUNT_BALANCE,
             self.unrealizedPL / MAX_ACCOUNT_BALANCE,
             self.realizedPL / MAX_ACCOUNT_BALANCE,
+            self.trades
         ]], axis=0)
         return obs
