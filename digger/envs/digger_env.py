@@ -29,7 +29,7 @@ class DiggerEnv(gym.Env):
         # action space - buy at most 20% of asset net asset, with a take profit of 60% or wait
         # self.observation_space =
         self.action_space = gym.spaces.Discrete(2)
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(MAX_STEPS + 1, 6))
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=((MAX_STEPS + 1) * 6))
 
         self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
 
@@ -39,9 +39,10 @@ class DiggerEnv(gym.Env):
         self.current_step += 1
         if self.current_step > len(self.df.loc[:, 'Open'].values) - MAX_STEPS:
             self.current_step = MAX_STEPS
-        delay_modifier = ((self.current_step - MAX_STEPS)/ 600000000)
+        delay_modifier = ((self.current_step - MAX_STEPS)/ 6000000000)
 
-        reward = self.balance * delay_modifier
+        reward = self.unrealizedPL * delay_modifier
+        # reward = self.balance * delay_modifier
         done = self.nav <= 0
         obs = self._next_observation()
         info = {
@@ -63,22 +64,26 @@ class DiggerEnv(gym.Env):
             self.df.loc[self.current_step, "Close"])
 
         self.unrealizedPL = (current_price - self.buy_price) * self.position_size
+        # take profit to stop loss ratio is 3:1
         if self.trades == 0:
             # no trades
             if action == 0:
                 # buy
                 self.buy_price = current_price
-                self.position_size = 0.2 * self.balance * 100
-
+                self.position_size = 0.05 * self.balance * 100
             elif action == 1:
                 # hold
                 pass
+            elif action == 2:
+                self.sell_price = current_price
+                self.position_size = 0.05 * self.balance * 100
         else:
             # theres an existing trade check for take profit and stop loss
-            take_profit_amount = 0.2 * self.balance * 1.6
-            stop_loss_amount = 0.2 * self.balance * 0.8  # 20% stop loss
+            # take_profit_amount = 0.05 * self.balance * 1.3 # 1.6
+            stop_loss_amount = 0.05 * self.balance * 0.75  # 20% stop loss
+            take_profit_amount = 3 * stop_loss_amount
 
-            if take_profit_amount >= (self.balance + self.unrealizedPL):
+            if self.unrealizedPL >= take_profit_amount:
                 self.trades = 0
                 self.buy_price = 0
                 self.position_size = 0
@@ -86,7 +91,7 @@ class DiggerEnv(gym.Env):
                 self.realizedPL += self.unrealizedPL
                 self.unrealizedPL = 0
 
-            if stop_loss_amount <= (self.balance + self.unrealizedPL):
+            if self.unrealizedPL <= -stop_loss_amount:
                 self.trades = 0
                 self.buy_price = 0
                 self.position_size = 0
@@ -142,4 +147,4 @@ class DiggerEnv(gym.Env):
             ]),
             np.zeros(993))
         )], axis=0)
-        return obs.transpose()
+        return obs.ravel()
