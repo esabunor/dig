@@ -29,7 +29,7 @@ class DiggerEnv(gym.Env):
         # action space - buy at most 20% of asset net asset, with a take profit of 60% or wait
         # self.observation_space =
         self.action_space = gym.spaces.Discrete(2)
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(6, 6))
+        self.observation_space = gym.spaces.Box(low=np.zeros(MAX_STEPS + 1), high=np.ones(MAX_STEPS + 1), shape=(6,))
 
         self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
 
@@ -119,12 +119,17 @@ class DiggerEnv(gym.Env):
         ])
 
         # Append additional data and scale each value to between 0-1
-        obs = np.append(frame, [[
-            self.balance / MAX_ACCOUNT_BALANCE,
-            self.max_nav / MAX_ACCOUNT_BALANCE,
-            self.nav / MAX_ACCOUNT_BALANCE,
-            self.unrealizedPL / MAX_ACCOUNT_BALANCE,
-            self.realizedPL / MAX_ACCOUNT_BALANCE,
-            self.trades
-        ]], axis=0)
+        obs = np.append(frame, [np.hstack((
+            np.array([
+                self.balance / MAX_ACCOUNT_BALANCE,
+                self.max_nav / MAX_ACCOUNT_BALANCE,
+                self.nav / MAX_ACCOUNT_BALANCE,
+                self.unrealizedPL / MAX_ACCOUNT_BALANCE,
+                self.realizedPL / MAX_ACCOUNT_BALANCE,
+                self.trades,
+                self.position_size / MAX_ACCOUNT_BALANCE * 100,
+                self.buy_price / MAX_CURRENCY_PRICE
+            ]),
+            np.zeros(86393))
+        )], axis=0)
         return obs
