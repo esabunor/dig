@@ -29,7 +29,7 @@ class DiggerEnv(gym.Env):
         # action space - buy at most 20% of asset net asset, with a take profit of 60% or wait
         # self.observation_space =
         self.action_space = gym.spaces.Discrete(2)
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=((MAX_STEPS + 1) * 6))
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=((MAX_STEPS + 1) * 6,))
 
         self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
 
