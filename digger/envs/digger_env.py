@@ -142,4 +142,4 @@ class DiggerEnv(gym.Env):
             ]),
             np.zeros(993))
         )], axis=0)
-        return obs
+        return obs.transpose()
