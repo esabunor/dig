@@ -38,13 +38,25 @@ class DiggerEnv(gym.Env):
 
     def step(self, action):
         # Execute one time step within the environment
-        self._take_action(action)
+
+        # Set the current price to a random price within the time step
+        current_price = random.uniform(
+            self.df.loc[self.current_step, "Open"],
+            self.df.loc[self.current_step, "Close"])
+
+        self._take_action(action, current_price)
         self.current_step += 1
         if self.current_step > len(self.df.loc[:, 'Open'].values) - MAX_STEPS:
             self.current_step = MAX_STEPS
         delay_modifier = ((self.current_step - MAX_STEPS)/ 6000000000)
 
-        reward = (self.balance + self.unrealizedPL) * delay_modifier
+        if action == 0:
+            # buy
+            reward = 0
+        elif action == 1 and self.trades > 0:
+            # hold and theres an existing trade
+            reward = current_price - self.buy_price
+        # reward = (self.balance + self.unrealizedPL) * delay_modifier
         # reward = self.balance * delay_modifier
         done = self.nav <= 0
         obs = self._next_observation()
@@ -60,30 +72,25 @@ class DiggerEnv(gym.Env):
         }
         return obs, reward, done, info
 
-    def _take_action(self, action):
-        # Set the current price to a random price within the time step
-        current_price = random.uniform(
-            self.df.loc[self.current_step, "Open"],
-            self.df.loc[self.current_step, "Close"])
+    def _take_action(self, action, current_price):
+
 
         self.unrealizedPL = (current_price - self.buy_price) * self.position_size
         # take profit to stop loss ratio is 3:1
         if self.trades == 0:
             # no trades
-            self.trades = 1
             if action == 0:
                 # buy
                 self.buy_price = current_price
                 self.position_size = 0.05 * self.balance * 100
+                self.trades = 1
             elif action == 1:
                 # hold
-                if self.training:
-                    i = (self.current_step - self.initial_step)
-                    self.balance += i * 0.002 * math.log(i + 1, 0.5)
                 self.trades = 0
             elif action == 2:
                 self.sell_price = current_price
                 self.position_size = 0.05 * self.balance * 100
+                self.trades = 1
         else:
             # theres an existing trade check for take profit and stop loss
             # take_profit_amount = 0.05 * self.balance * 1.3 # 1.6
