@@ -15,7 +15,7 @@ MAX_VOLUME = 1000
 class DiggerEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, df=None):
+    def __init__(self, df=None, training=False):
         self.df = df
         self.balance = INITIAL_ACCOUNT_BALANCE
         self.nav = INITIAL_ACCOUNT_BALANCE
@@ -25,6 +25,7 @@ class DiggerEnv(gym.Env):
         self.trades = 0
         self.buy_price = 0
         self.position_size = 0
+        self.training = training
         # observation space - ohlc of the past 12 ticks (an hour)
         # action space - buy at most 20% of asset net asset, with a take profit of 60% or wait
         # self.observation_space =
@@ -74,7 +75,8 @@ class DiggerEnv(gym.Env):
                 self.position_size = 0.05 * self.balance * 100
             elif action == 1:
                 # hold
-                self.balance = self.balance * 0.999
+                if self.training:
+                    self.balance = self.balance * 0.999
                 self.trades = 0
             elif action == 2:
                 self.sell_price = current_price
