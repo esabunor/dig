@@ -75,6 +75,7 @@ class DiggerEnv(gym.Env):
             elif action == 1:
                 # hold
                 self.balance = self.balance * 0.999
+                self.trades = 0
             elif action == 2:
                 self.sell_price = current_price
                 self.position_size = 0.05 * self.balance * 100
