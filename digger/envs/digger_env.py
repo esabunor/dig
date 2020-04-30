@@ -5,8 +5,8 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
 
-INITIAL_ACCOUNT_BALANCE = 20000
-MAX_ACCOUNT_BALANCE = 2000000
+INITIAL_ACCOUNT_BALANCE = 20000.0
+MAX_ACCOUNT_BALANCE = 2000000.0
 MAX_STEPS = 1000
 MAX_CURRENCY_PRICE = 500
 MAX_VOLUME = 1000
@@ -67,6 +67,7 @@ class DiggerEnv(gym.Env):
         # take profit to stop loss ratio is 3:1
         if self.trades == 0:
             # no trades
+            self.trades = 1
             if action == 0:
                 # buy
                 self.buy_price = current_price
