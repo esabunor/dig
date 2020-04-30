@@ -4,6 +4,7 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
+import math
 
 INITIAL_ACCOUNT_BALANCE = 20000.0
 MAX_ACCOUNT_BALANCE = 2000000.0
@@ -33,6 +34,7 @@ class DiggerEnv(gym.Env):
         self.observation_space = gym.spaces.Box(low=0, high=1, shape=((MAX_STEPS + 1) * 6,))
 
         self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
+        self.initial_step = self.current_step
 
     def step(self, action):
         # Execute one time step within the environment
@@ -76,7 +78,8 @@ class DiggerEnv(gym.Env):
             elif action == 1:
                 # hold
                 if self.training:
-                    self.balance = self.balance * 0.999
+                    i = (self.current_step - self.initial_step)
+                    self.balance += i * 0.002 * math.log(i + 1, 0.5)
                 self.trades = 0
             elif action == 2:
                 self.sell_price = current_price
