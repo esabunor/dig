@@ -49,7 +49,7 @@ class DiggerEnv(gym.Env):
         if self.current_step > len(self.df.loc[:, 'Open'].values) - MAX_STEPS:
             self.current_step = MAX_STEPS
         delay_modifier = ((self.current_step - MAX_STEPS)/ 6000000000)
-
+        reward = 0
         if action == 0:
             # buy
             reward = 0
