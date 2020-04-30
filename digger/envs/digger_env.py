@@ -100,7 +100,7 @@ class DiggerEnv(gym.Env):
                 self.realizedPL += self.unrealizedPL
                 self.unrealizedPL = 0
 
-        self.nav += self.unrealizedPL
+        self.nav = self.balance + self.unrealizedPL
         if self.nav > self.max_nav:
             self.max_nav = self.nav
 
