@@ -41,7 +41,7 @@ class DiggerEnv(gym.Env):
             self.current_step = MAX_STEPS
         delay_modifier = ((self.current_step - MAX_STEPS)/ 6000000000)
 
-        reward = self.unrealizedPL * delay_modifier
+        reward = (self.balance + self.unrealizedPL) * delay_modifier
         # reward = self.balance * delay_modifier
         done = self.nav <= 0
         obs = self._next_observation()
@@ -73,7 +73,7 @@ class DiggerEnv(gym.Env):
                 self.position_size = 0.05 * self.balance * 100
             elif action == 1:
                 # hold
-                pass
+                self.balance = self.balance * 0.999
             elif action == 2:
                 self.sell_price = current_price
                 self.position_size = 0.05 * self.balance * 100
