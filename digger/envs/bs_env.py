@@ -89,8 +89,12 @@ class BSEnv(gym.Env):
     def _take_action(self, action, current_price):
         # take profit to stop loss ratio is 3:1
         trade = False
-        if (action == 0 and self.previous_action == 1) or (action == 1 and self.previous_action == 0):
+
+        if self.previous_action == None:
             trade = True
+        else:
+            if (action == 0 and self.previous_action == 1) or (action == 1 and self.previous_action == 0):
+                trade = True
 
         if trade:
             if self.previous_action:
