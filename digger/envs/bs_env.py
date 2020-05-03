@@ -25,6 +25,7 @@ class BSEnv(gym.Env):
         self.unrealizedPL = 0
         self.trades = 0
         self.buy_price = 0
+        self.sell_price = 0
         self.position_size = 0
         self.training = training
         # observation space - ohlc of the past 12 ticks (an hour)
