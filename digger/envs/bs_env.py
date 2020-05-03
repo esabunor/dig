@@ -32,7 +32,7 @@ class BSEnv(gym.Env):
         # action space - buy at most 20% of asset net asset, with a take profit of 60% or wait
         # self.observation_space =
         self.action_space = gym.spaces.Discrete(2)
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=((MAX_STEPS + 1) * 6,))
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=((MAX_STEPS + 1) * 5,))
 
         self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
         self.initial_step = self.current_step
@@ -173,16 +173,16 @@ class BSEnv(gym.Env):
         ])
 
         # Append additional data and scale each value to between 0-1
-        obs = np.append(frame, [np.hstack((
-            np.array([
-                self.balance / MAX_ACCOUNT_BALANCE,
-                self.max_nav / MAX_ACCOUNT_BALANCE,
-                self.nav / MAX_ACCOUNT_BALANCE,
-                self.unrealizedPL / MAX_ACCOUNT_BALANCE,
-                self.realizedPL / MAX_ACCOUNT_BALANCE,
-                self.position_size / MAX_ACCOUNT_BALANCE * 100,
-                self.buy_price / MAX_CURRENCY_PRICE
-            ]),
-            np.zeros(MAX_STEPS - 6))
-        )], axis=0)
-        return obs.ravel()
+        # obs = np.append(frame, [np.hstack((
+        #     np.array([
+        #         self.balance / MAX_ACCOUNT_BALANCE,
+        #         self.max_nav / MAX_ACCOUNT_BALANCE,
+        #         self.nav / MAX_ACCOUNT_BALANCE,
+        #         self.unrealizedPL / MAX_ACCOUNT_BALANCE,
+        #         self.realizedPL / MAX_ACCOUNT_BALANCE,
+        #         self.position_size / MAX_ACCOUNT_BALANCE * 100,
+        #         self.buy_price / MAX_CURRENCY_PRICE
+        #     ]),
+        #     np.zeros(MAX_STEPS - 6))
+        # )], axis=0)
+        return frame.ravel()

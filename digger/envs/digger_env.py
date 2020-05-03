@@ -101,19 +101,20 @@ class DiggerEnv(gym.Env):
                 self.trades = 0
                 self.buy_price = 0
                 self.position_size = 0
-                self.balance += self.unrealizedPL
+                self.balance = self.nav + self.unrealizedPL
                 self.realizedPL += self.unrealizedPL
                 self.unrealizedPL = 0
+                self.nav = self.balance + self.unrealizedPL
 
             if self.unrealizedPL <= -stop_loss_amount:
                 self.trades = 0
                 self.buy_price = 0
                 self.position_size = 0
-                self.balance += self.unrealizedPL
+                self.balance = self.nav + self.unrealizedPL
                 self.realizedPL += self.unrealizedPL
                 self.unrealizedPL = 0
+                self.nav = self.balance + self.unrealizedPL
 
-        self.nav = self.balance + self.unrealizedPL
         if self.nav > self.max_nav:
             self.max_nav = self.nav
 
