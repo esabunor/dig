@@ -36,7 +36,7 @@ class BSEnv(gym.Env):
 
         self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
         self.initial_step = self.current_step
-        self.previous_action = 0  # buy
+        self.previous_action = None  # buy
 
     def step(self, action):
         # Execute one time step within the environment
@@ -51,18 +51,24 @@ class BSEnv(gym.Env):
         reward = 0
 
         trade = False
-        if (action == 0 and self.previous_action == 1) or (action == 1 and self.previous_action == 0):
+        if self.previous_action == None:
             trade = True
+        else:
+            if (action == 0 and self.previous_action == 1) or (action == 1 and self.previous_action == 0):
+                trade = True
 
         if trade:
             if self.previous_action == 0:
+                # long
                 price_diff = current_price - self.buy_price
                 reward += price_diff * 1000
             elif self.previous_action == 1:
                 # short
                 price_diff = self.sell_price - current_price
                 reward += price_diff * 1000
-            self.previous_action = action
+            elif self.previous_action == None:
+                self.previous_action = action
+
         # reward = (self.balance + self.unrealizedPL) * delay_modifier
         # reward = self.balance * delay_modifier
         done = self.nav <= 0
@@ -87,31 +93,47 @@ class BSEnv(gym.Env):
             trade = True
 
         if trade:
-            if action == 0:
-                # buy
-                # previous action is sell so calculate profit for the short position
-                self.unrealizedPL = (self.sell_price - current_price) * self.position_size
-                self.buy_price = current_price
-                self.position_size = 0.2 * self.balance * 100
-            elif action == 1:
-                # sell
-                self.unrealizedPL = (current_price - self.buy_price) * self.position_size
-                self.sell_price = current_price
-                self.position_size = 0.2 * self.balance * 100
+            if self.previous_action:
+                # not the first action
+                if action == 0:
+                    # buy
+                    # previous action is sell so calculate profit for the short position
+                    self.unrealizedPL = (self.sell_price - current_price) * self.position_size
+                    self.buy_price = current_price
+                    self.position_size = 0.2 * self.balance * 100
+                elif action == 1:
+                    # sell
+                    self.unrealizedPL = (current_price - self.buy_price) * self.position_size  #  calculate profit for previous postion
+                    self.sell_price = current_price
+                    self.position_size = 0.2 * self.balance * 100
+                self.previous_action = action
+                self.balance = self.nav + self.unrealizedPL
+                self.realizedPL += self.unrealizedPL
+                self.nav = self.balance
+                self.unrealizedPL = 0
 
-            self.balance += self.unrealizedPL
-            self.nav = self.balance + self.unrealizedPL
-            self.realizedPL += self.unrealizedPL
-            self.unrealizedPL = 0
+            else:
+                # first action
+                if action == 0:
+                    # buy for the first time
+                    self.buy_price = current_price
+                    self.position_size = 0.2 * self.balance * 100
+                elif action == 1:
+                    # sell for the first time
+                    self.sell_price = current_price
+                    self.position_size = 0.2 * self.balance * 100
+
         else:
             # continue in same position
             if self.previous_action == 0:
                 # long position or buy
                 self.unrealizedPL = (current_price - self.buy_price) * self.position_size
             elif self.previous_action == 1:
+                # short position or buy
                 self.unrealizedPL = (self.sell_price - current_price) * self.position_size
-            self.balance += self.unrealizedPL
-
+            # always reset the unrealizedPL because it is recalculted
+            self.balance = self.nav + self.unrealizedPL
+            self.unrealizedPL = 0
         if self.nav > self.max_nav:
             self.max_nav = self.nav
 
@@ -122,7 +144,9 @@ class BSEnv(gym.Env):
         self.realizedPL = 0
         self.unrealizedPL = 0
         self.buy_price = 0
+        self.sell_price = 0
         self.position_size = 0
+        self.previous_action = None
         self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
         return self._next_observation()
 
