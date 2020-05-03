@@ -75,7 +75,7 @@ class BSEnv(gym.Env):
             'unrealizedPL': self.unrealizedPL,
             'buy_price': self.buy_price,
             'sell_price': self.sell_price,
-            'position': "Long" if self.action == 0 else "Short"
+            'position': "Long" if action == 0 else "Short"
         }
         return obs, reward, done, info
 
@@ -151,10 +151,9 @@ class BSEnv(gym.Env):
                 self.nav / MAX_ACCOUNT_BALANCE,
                 self.unrealizedPL / MAX_ACCOUNT_BALANCE,
                 self.realizedPL / MAX_ACCOUNT_BALANCE,
-                self.trades,
                 self.position_size / MAX_ACCOUNT_BALANCE * 100,
                 self.buy_price / MAX_CURRENCY_PRICE
             ]),
-            np.zeros(993))
+            np.zeros(MAX_STEPS - 6))
         )], axis=0)
         return obs.ravel()
