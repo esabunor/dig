@@ -5,12 +5,23 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
 import math
+from enum import Enum
 
 INITIAL_ACCOUNT_BALANCE = 20000.0
 MAX_ACCOUNT_BALANCE = 2000000.0
 MAX_STEPS = 100
 MAX_CURRENCY_PRICE = 500
 MAX_VOLUME = 1000
+
+
+class Positions(Enum):
+    SHORT = 1
+    LONG = 0
+
+
+class Actions(Enum):
+    SELL = 1
+    BUY = 0
 
 
 class BSEnv(gym.Env):
@@ -43,31 +54,13 @@ class BSEnv(gym.Env):
         # Set the current price to a random price within the time step
         current_price = self.df.loc[self.current_step, "Close"]
         self.current_step += 1
+        price_diff = 0
 
-        self._take_action(action, current_price)
+        reward, price_diff = self._take_action(action, current_price)
 
         if self.current_step > len(self.df.loc[:, 'Close'].values) - MAX_STEPS:
             self.current_step = MAX_STEPS
-        reward = 0
 
-        trade = False
-        if self.previous_action == None:
-            trade = True
-        else:
-            if (action == 0 and self.previous_action == 1) or (action == 1 and self.previous_action == 0):
-                trade = True
-
-        if trade:
-            if self.previous_action == 0:
-                # long
-                price_diff = current_price - self.buy_price
-                reward += price_diff * 1000
-            elif self.previous_action == 1:
-                # short
-                price_diff = self.sell_price - current_price
-                reward += price_diff * 1000
-            elif self.previous_action == None:
-                self.previous_action = action
 
         # reward = (self.balance + self.unrealizedPL) * delay_modifier
         # reward = self.balance * delay_modifier
@@ -82,14 +75,19 @@ class BSEnv(gym.Env):
             'unrealizedPL': self.unrealizedPL,
             'buy_price': self.buy_price,
             'sell_price': self.sell_price,
-            'position': "Long" if action == 0 else "Short"
+            'position': "Long" if action == 0 else "Short",
+            'current_price': current_price,
+            'price_diff': price_diff,
+            'time': self.df.loc[self.current_step, "time"],
+            'previous_postn': "Long" if self.previous_action == 0 else "Short"
         }
+        self.previous_action = action
         return obs, reward, done, info
 
     def _take_action(self, action, current_price):
         # take profit to stop loss ratio is 3:1
         trade = False
-
+        reward, price_diff = 0, 0
         if self.previous_action == None:
             trade = True
         else:
@@ -97,25 +95,28 @@ class BSEnv(gym.Env):
                 trade = True
 
         if trade:
-            if self.previous_action:
+            if self.previous_action == 0 or self.previous_action == 1:
                 # not the first action
                 if action == 0:
                     # buy
                     # previous action is sell so calculate profit for the short position
+                    # long
+                    price_diff = self.sell_price - current_price
+                    reward = price_diff * 1000
                     self.unrealizedPL = (self.sell_price - current_price) * self.position_size
                     self.buy_price = current_price
                     self.position_size = 0.2 * self.balance * 100
                 elif action == 1:
                     # sell
+                    # short|
+                    price_diff = current_price - self.buy_price
+                    reward = price_diff * 1000
                     self.unrealizedPL = (current_price - self.buy_price) * self.position_size  #  calculate profit for previous postion
                     self.sell_price = current_price
                     self.position_size = 0.2 * self.balance * 100
-                self.previous_action = action
                 self.balance = self.nav + self.unrealizedPL
                 self.realizedPL += self.unrealizedPL
                 self.nav = self.balance
-                self.unrealizedPL = 0
-
             else:
                 # first action
                 if action == 0:
@@ -126,20 +127,24 @@ class BSEnv(gym.Env):
                     # sell for the first time
                     self.sell_price = current_price
                     self.position_size = 0.2 * self.balance * 100
-
         else:
             # continue in same position
             if self.previous_action == 0:
                 # long position or buy
                 self.unrealizedPL = (current_price - self.buy_price) * self.position_size
+                price_diff = current_price - self.buy_price
+                reward += price_diff * 1000
             elif self.previous_action == 1:
-                # short position or buy
+                # short position or sell
                 self.unrealizedPL = (self.sell_price - current_price) * self.position_size
-            # always reset the unrealizedPL because it is recalculted
+                # short
+                price_diff = self.sell_price - current_price
+                reward += price_diff * 1000
+            # always reset the unrealizedPL because it is recalculated
             self.balance = self.nav + self.unrealizedPL
-            self.unrealizedPL = 0
         if self.nav > self.max_nav:
             self.max_nav = self.nav
+        return reward, price_diff
 
     def reset(self):
         self.balance = INITIAL_ACCOUNT_BALANCE
@@ -151,7 +156,7 @@ class BSEnv(gym.Env):
         self.sell_price = 0
         self.position_size = 0
         self.previous_action = None
-        self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
+        self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Close'].values) - MAX_STEPS)
         return self._next_observation()
 
     def render(self, mode='human', close=False):
@@ -172,6 +177,9 @@ class BSEnv(gym.Env):
             self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Volume'].values / MAX_VOLUME,
         ])
 
+        sma_5 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=5).mean()
+        sma_8 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=8).mean()
+        sma_13 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=13).mean()
         # Append additional data and scale each value to between 0-1
         # obs = np.append(frame, [np.hstack((
         #     np.array([
