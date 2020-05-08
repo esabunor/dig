@@ -64,7 +64,9 @@ class BSEnv(gym.Env):
 
         # reward = (self.balance + self.unrealizedPL) * delay_modifier
         # reward = self.balance * delay_modifier
-        done = self.nav <= 0
+        done = self.nav * 0.9 > self.balance
+        if done:
+            reward *= 20
         obs = self._next_observation()
         info = {
             'current_step': self.current_step,
