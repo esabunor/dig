@@ -43,7 +43,7 @@ class BSEnv(gym.Env):
         # action space - buy at most 20% of asset net asset, with a take profit of 60% or wait
         # self.observation_space =
         self.action_space = gym.spaces.Discrete(2)
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=((MAX_STEPS + 1) * 5,))
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=((MAX_STEPS + 1) * 8,))
 
         self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
         self.initial_step = self.current_step
@@ -169,17 +169,21 @@ class BSEnv(gym.Env):
 
     def _next_observation(self):
         # Get the data points for the last hour and scale to between 0-1
+        sma_5 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=5).mean()
+        sma_8 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=8).mean()
+        sma_13 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=13).mean()
+
         frame = np.array([
             self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Open'].values / MAX_CURRENCY_PRICE,
             self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'High'].values / MAX_CURRENCY_PRICE,
             self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Low'].values / MAX_CURRENCY_PRICE,
             self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].values / MAX_CURRENCY_PRICE,
             self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Volume'].values / MAX_VOLUME,
+            sma_5 / MAX_CURRENCY_PRICE,
+            sma_8 / MAX_CURRENCY_PRICE,
+            sma_13 / MAX_CURRENCY_PRICE
         ])
 
-        sma_5 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=5).mean()
-        sma_8 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=8).mean()
-        sma_13 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=13).mean()
         # Append additional data and scale each value to between 0-1
         # obs = np.append(frame, [np.hstack((
         #     np.array([
