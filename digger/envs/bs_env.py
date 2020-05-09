@@ -199,4 +199,4 @@ class BSEnv(gym.Env):
         #     ]),
         #     np.zeros(MAX_STEPS - 6))
         # )], axis=0)
-        return frame.ravel()
+        return frame
