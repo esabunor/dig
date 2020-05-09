@@ -14,3 +14,8 @@ register(
     id='BSEnv-v0',
     entry_point='digger.envs:BSEnv',
 )
+
+register(
+    id='BSEnv-v1',
+    entry_point='digger.envs:BSEnvV2',
+)
