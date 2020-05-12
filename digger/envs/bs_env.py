@@ -202,7 +202,7 @@ class BSEnv(gym.Env):
         return frame
 
 
-class BSEnvV2(BSEnv):
+class BSEnvV1(BSEnv):
 
     def __init__(self, df=None, training=False):
         super().__init__(df, training)
@@ -242,4 +242,26 @@ class BSEnvV2(BSEnv):
         #     ]),
         #     np.zeros(MAX_STEPS - 6))
         # )], axis=0)
+        return frame.ravel()
+
+
+class BSEnvV2(BSEnv):
+    def __init__(self, df=None, training=False):
+        MAX_STEPS = 300 # 300
+        super().__init__(df, training)
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(5 * (MAX_STEPS + 1),))
+
+        self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
+        self.initial_step = self.current_step
+        self.previous_action = None  # buy
+
+    def _next_observation(self):
+        # Get the data points for the last hour and scale to between 0-1
+        frame = np.array([
+            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Open'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'High'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Low'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Volume'].values / MAX_VOLUME,
+        ])
         return frame.ravel()
