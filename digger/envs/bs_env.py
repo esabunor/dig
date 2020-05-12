@@ -9,7 +9,6 @@ from enum import Enum
 
 INITIAL_ACCOUNT_BALANCE = 20000.0
 MAX_ACCOUNT_BALANCE = 2000000.0
-MAX_STEPS = 100
 MAX_CURRENCY_PRICE = 500
 MAX_VOLUME = 1000
 
@@ -27,7 +26,7 @@ class Actions(Enum):
 class BSEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, df=None, training=False):
+    def __init__(self, df=None, training=False, max_steps=100):
         self.df = df
         self.balance = INITIAL_ACCOUNT_BALANCE
         self.nav = INITIAL_ACCOUNT_BALANCE
@@ -39,13 +38,14 @@ class BSEnv(gym.Env):
         self.sell_price = 0
         self.position_size = 0
         self.training = training
+        self.max_steps = max_steps
         # observation space - ohlc of the past 12 ticks (an hour)
         # action space - buy at most 20% of asset net asset, with a take profit of 60% or wait
         # self.observation_space =
         self.action_space = gym.spaces.Discrete(2)
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(8, (MAX_STEPS + 1)))
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(8, (self.max_steps + 1)))
 
-        self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
+        self.current_step = random.randint(self.max_steps, len(self.df.loc[:, 'Open'].values) - self.max_steps)
         self.initial_step = self.current_step
         self.previous_action = None  # buy
 
@@ -58,8 +58,8 @@ class BSEnv(gym.Env):
 
         reward, price_diff = self._take_action(action, current_price)
 
-        if self.current_step > len(self.df.loc[:, 'Close'].values) - MAX_STEPS:
-            self.current_step = MAX_STEPS
+        if self.current_step > len(self.df.loc[:, 'Close'].values) - self.max_steps:
+            self.current_step = self.max_steps
 
         # reward = (self.balance + self.unrealizedPL) * delay_modifier
         # reward = self.balance * delay_modifier
@@ -158,7 +158,7 @@ class BSEnv(gym.Env):
         self.sell_price = 0
         self.position_size = 0
         self.previous_action = None
-        self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Close'].values) - MAX_STEPS)
+        self.current_step = random.randint(self.max_steps, len(self.df.loc[:, 'Close'].values) - self.max_steps)
         return self._next_observation()
 
     def render(self, mode='human', close=False):
@@ -171,16 +171,16 @@ class BSEnv(gym.Env):
 
     def _next_observation(self):
         # Get the data points for the last hour and scale to between 0-1
-        sma_5 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=5).mean()
-        sma_8 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=8).mean()
-        sma_13 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=13).mean()
+        sma_5 = self.df.loc[self.current_step - self.max_steps: self.current_step, 'Close'].rolling(window=5).mean()
+        sma_8 = self.df.loc[self.current_step - self.max_steps: self.current_step, 'Close'].rolling(window=8).mean()
+        sma_13 = self.df.loc[self.current_step - self.max_steps: self.current_step, 'Close'].rolling(window=13).mean()
 
         frame = np.array([
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Open'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'High'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Low'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Volume'].values / MAX_VOLUME,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Open'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'High'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Low'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Close'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Volume'].values / MAX_VOLUME,
             sma_5 / MAX_CURRENCY_PRICE,
             sma_8 / MAX_CURRENCY_PRICE,
             sma_13 / MAX_CURRENCY_PRICE
@@ -197,33 +197,37 @@ class BSEnv(gym.Env):
         #         self.position_size / MAX_ACCOUNT_BALANCE * 100,
         #         self.buy_price / MAX_CURRENCY_PRICE
         #     ]),
-        #     np.zeros(MAX_STEPS - 6))
+        #     np.zeros(self.max_steps - 6))
         # )], axis=0)
         return frame
 
 
 class BSEnvV1(BSEnv):
-
-    def __init__(self, df=None, training=False):
+    """
+    includes moving averages 5, 8, 13
+    observation shape is (808,) meaning that the input would look like
+    """
+    def __init__(self, df=None, training=False, max_steps=100):
         super().__init__(df, training)
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(8 * (MAX_STEPS + 1),))
+        self.max_steps = max_steps
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(8 * (self.max_steps + 1),))
 
-        self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
+        self.current_step = random.randint(self.max_steps, len(self.df.loc[:, 'Open'].values) - self.max_steps)
         self.initial_step = self.current_step
         self.previous_action = None  # buy
 
     def _next_observation(self):
         # Get the data points for the last hour and scale to between 0-1
-        sma_5 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=5).mean()
-        sma_8 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=8).mean()
-        sma_13 = self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].rolling(window=13).mean()
+        sma_5 = self.df.loc[self.current_step - self.max_steps: self.current_step, 'Close'].rolling(window=5).mean()
+        sma_8 = self.df.loc[self.current_step - self.max_steps: self.current_step, 'Close'].rolling(window=8).mean()
+        sma_13 = self.df.loc[self.current_step - self.max_steps: self.current_step, 'Close'].rolling(window=13).mean()
 
         frame = np.array([
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Open'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'High'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Low'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Volume'].values / MAX_VOLUME,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Open'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'High'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Low'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Close'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Volume'].values / MAX_VOLUME,
             sma_5 / MAX_CURRENCY_PRICE,
             sma_8 / MAX_CURRENCY_PRICE,
             sma_13 / MAX_CURRENCY_PRICE
@@ -240,28 +244,28 @@ class BSEnvV1(BSEnv):
         #         self.position_size / MAX_ACCOUNT_BALANCE * 100,
         #         self.buy_price / MAX_CURRENCY_PRICE
         #     ]),
-        #     np.zeros(MAX_STEPS - 6))
+        #     np.zeros(self.max_steps - 6))
         # )], axis=0)
         return frame.ravel()
 
 
 class BSEnvV2(BSEnv):
-    def __init__(self, df=None, training=False):
-        MAX_STEPS = 300 # 300
+    def __init__(self, df=None, training=False, max_steps=300):
+        self.max_steps = max_steps # 300
         super().__init__(df, training)
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(5 * (MAX_STEPS + 1),))
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(5 * (self.max_steps + 1),))
 
-        self.current_step = random.randint(MAX_STEPS, len(self.df.loc[:, 'Open'].values) - MAX_STEPS)
+        self.current_step = random.randint(self.max_steps, len(self.df.loc[:, 'Open'].values) - self.max_steps)
         self.initial_step = self.current_step
         self.previous_action = None  # buy
 
     def _next_observation(self):
         # Get the data points for the last hour and scale to between 0-1
         frame = np.array([
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Open'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'High'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Low'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Close'].values / MAX_CURRENCY_PRICE,
-            self.df.loc[self.current_step - MAX_STEPS: self.current_step, 'Volume'].values / MAX_VOLUME,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Open'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'High'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Low'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Close'].values / MAX_CURRENCY_PRICE,
+            self.df.loc[self.current_step - self.max_steps: self.current_step, 'Volume'].values / MAX_VOLUME,
         ])
         return frame.ravel()
