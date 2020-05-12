@@ -251,8 +251,8 @@ class BSEnvV1(BSEnv):
 
 class BSEnvV2(BSEnv):
     def __init__(self, df=None, training=False, max_steps=300):
-        self.max_steps = max_steps # 300
         super().__init__(df, training)
+        self.max_steps = max_steps # 300
         self.observation_space = gym.spaces.Box(low=0, high=1, shape=(5 * (self.max_steps + 1),))
 
         self.current_step = random.randint(self.max_steps, len(self.df.loc[:, 'Open'].values) - self.max_steps)
