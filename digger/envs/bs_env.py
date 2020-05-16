@@ -112,8 +112,7 @@ class BSEnv(gym.Env):
                     # short|
                     price_diff = current_price - self.buy_price
                     reward = price_diff * 1000
-                    self.unrealizedPL = (
-                                                    current_price - self.buy_price) * self.position_size  # calculate profit for previous postion
+                    self.unrealizedPL = (current_price - self.buy_price) * self.position_size  # calculate profit for previous postion
                     self.sell_price = current_price
                     self.position_size = 0.2 * self.balance * 100
                 self.balance = self.nav + self.unrealizedPL
