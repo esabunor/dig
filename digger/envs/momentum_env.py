@@ -69,7 +69,7 @@ class MomentumEnv(gym.Env):
             'position': "Long" if action == 0 else "Short",
             'current_price': current_price,
             'price_diff': price_diff,
-            'time': self.df.loc[self.current_step, "time"],
+            'time': self.df.loc[self.current_step, "Date"],
             'current_postn': self.action
         }
         self.current_step += 1
