@@ -173,4 +173,4 @@ class MomentumEnv(gym.Env):
                        ys_volume,
                        ys_macd,
                        ys_gx,
-                       ys_rx
+                       ys_rx]
