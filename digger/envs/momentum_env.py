@@ -255,7 +255,7 @@ class MomentumEnv2(gym.Env):
             'time': self.df.loc[self.current_step, "Date"],
             'current_postn': self.action,
             'open_postn': self.open_position,
-            'take_profit': self.take_profit,
+            'take_profit_step': self.take_profit_step,
             'stop_loss': self.stop_loss
         }
         self.current_step += 1
