@@ -268,3 +268,27 @@ class BSEnvV2(BSEnv):
             self.df.loc[self.current_step - self.max_steps: self.current_step, 'Volume'].values / MAX_VOLUME,
         ])
         return frame.ravel()
+
+
+class BSEnvTester(BSEnvV2):
+    def __init__(self, df=None, training=False, max_steps=100):
+        super().__init__(df, training)
+        self.max_steps = max_steps  # 300
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(5 * (self.max_steps + 1),))
+
+        self.current_step = 100 #random.randint(self.max_steps, len(self.df.loc[:, 'Open'].values) - self.max_steps)
+        self.initial_step = self.current_step
+        self.previous_action = None  # buy
+
+    def reset(self):
+        self.balance = INITIAL_ACCOUNT_BALANCE
+        self.nav = INITIAL_ACCOUNT_BALANCE
+        self.max_nav = INITIAL_ACCOUNT_BALANCE
+        self.realizedPL = 0
+        self.unrealizedPL = 0
+        self.buy_price = 0
+        self.sell_price = 0
+        self.position_size = 0
+        self.previous_action = None
+        self.current_step = 100 #random.randint(self.max_steps, len(self.df.loc[:, 'Close'].values) - self.max_steps)
+        return self._next_observation()
