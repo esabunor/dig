@@ -24,3 +24,8 @@ register(
     id='BSEnv-v2',
     entry_point='digger.envs:BSEnvV2',
 )
+
+register(
+    id='MomentumEnv-v0',
+    entry_point='digger.envs:MomentumEnv',
+)
