@@ -3,8 +3,10 @@ import pandas as pd
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
+import mplfinance as mpl
 import numpy as np
 import math
+from finta import TA
 from enum import Enum
 
 INITIAL_ACCOUNT_BALANCE = 20000.0
@@ -70,7 +72,10 @@ class MomentumEnv(gym.Env):
             'current_price': current_price,
             'price_diff': price_diff,
             'time': self.df.loc[self.current_step, "Date"],
-            'current_postn': self.action
+            'current_postn': self.action,
+            'open_postn': self.open_position,
+            'take_profit': self.take_profit,
+            'stop_loss': self.stop_loss
         }
         self.current_step += 1
 
@@ -86,9 +91,8 @@ class MomentumEnv(gym.Env):
                 # long
                 price_diff = self.sell_price - current_price
                 reward = price_diff * 1000
-                self.unrealizedPL = (self.sell_price - current_price) * self.position_size
                 self.buy_price = current_price
-                self.position_size = 0.2 * self.balance * 100
+                self.position_size = 0.4 * self.balance * 100
                 self.take_profit = current_price + 0.002
                 self.stop_loss = current_price - 0.0007
                 self.action = action
@@ -98,33 +102,36 @@ class MomentumEnv(gym.Env):
                 # short|
                 price_diff = current_price - self.buy_price
                 reward = price_diff * 1000
-                self.unrealizedPL = (current_price - self.buy_price) * self.position_size  # calculate profit for previous postion
+                # calculate profit for previous postion
                 self.sell_price = current_price
-                self.position_size = 0.2 * self.balance * 100
+                self.position_size = 0.4 * self.balance * 100
                 self.take_profit = current_price - 0.002
                 self.stop_loss = current_price + 0.0007
                 self.action = action
                 self.open_position = True
             elif action == 0:
-                pass  # do nothing
+                self.action = action  # do nothing
+        else:
+            if self.action == 1:
+                # buy
+                if current_price >= self.take_profit  or current_price  <= self.stop_loss:
+                    # take profit or losss
+                    self.unrealizedPL = (current_price - self.buy_price) * self.position_size
+                    self.balance = self.nav + self.unrealizedPL
+                    self.realizedPL += self.unrealizedPL
+                    self.nav = self.balance
+                    self.open_position = False
 
-        if self.action == 1:
-            # buy
-            if self.take_profit >= current_price or self.stop_loss <= current_price:
-                # take profit or losss
-                self.balance = self.nav + self.unrealizedPL
-                self.realizedPL += self.unrealizedPL
-                self.nav = self.balance
-                self.open_position = False
+            elif self.action == 2:
+                # sell
+                if current_price <= self.take_profit or current_price >= self.stop_loss:
+                    # take profit
+                    self.unrealizedPL = (self.sell_price - current_price) * self.position_size
+                    self.balance = self.nav + self.unrealizedPL
+                    self.realizedPL += self.unrealizedPL
+                    self.nav = self.balance
+                    self.open_position = False
 
-        elif self.action == 2:
-            # sell
-            if self.take_profit <= current_price or self.stop_loss >= current_price:
-                # take profit
-                self.balance = self.nav + self.unrealizedPL
-                self.realizedPL += self.unrealizedPL
-                self.nav = self.balance
-                self.open_position = False
         if self.nav > self.max_nav:
             self.max_nav = self.nav
         return reward, price_diff
@@ -152,20 +159,33 @@ class MomentumEnv(gym.Env):
         print(f'Balance: {self.balance}')
         print(f'Profit: {profit}')
         print(f'Net worth: {self.nav} (Max net worth: {self.max_nav})')
+        fig, _ = mpl.plot(self.df.iloc[self.current_step - 10: self.current_step + 10], type='candle', mav=(3, 6, 9), volume=True, returnfig=True)
 
     def _next_observation(self):
         # Get the data points for the last hour and scale to between 0-1
 
-        n_steps = 9
+        X = self.df[['Close', 'Open', 'High', 'Low', 'Volume', 'Green_X', 'Red_X', 'Date']]
+        y = self.df['Action']
+
+        X_ta = self.df.rename(columns={'volume': 'Volume', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close'})
+        X['MACD'] = TA.MACD(X_ta[['open', 'high', 'low', 'close']])['MACD']
+
+        X['Open'] = X['Open'] / 10
+        X['Close'] = X['Close'] / 10
+        X['High'] = X['High'] / 10
+        X['Low'] = X['Low'] / 10
+        X['Volume'] = X['Volume'] / 10000
+
         t0 = np.array(self.current_step).reshape(-1, 1) - 9
-        ys_cp = self.df.Close.values[t0.astype('int') + np.arange(0, n_steps + 1)]
-        ys_op = self.df.Open.values[t0.astype('int') + np.arange(0, n_steps + 1)]
-        ys_hp = self.df.High.values[t0.astype('int') + np.arange(0, n_steps + 1)]
-        ys_lp = self.df.Low.values[t0.astype('int') + np.arange(0, n_steps + 1)]
-        ys_gx = self.df.Green_X.values[t0.astype('int') + np.arange(0, n_steps + 1)]
-        ys_rx = self.df.Red_X.values[t0.astype('int') + np.arange(0, n_steps + 1)]
-        ys_volume = self.df.Volume.values[t0.astype('int') + np.arange(0, n_steps + 1)]
-        ys_macd = self.df.MACD.values[t0.astype('int') + np.arange(0, n_steps + 1)]
+        n_steps = 9
+        ys_cp = X.Close.values[t0.astype('int') + np.arange(0, n_steps + 1)]
+        ys_op = X.Open.values[t0.astype('int') + np.arange(0, n_steps + 1)]
+        ys_hp = X.High.values[t0.astype('int') + np.arange(0, n_steps + 1)]
+        ys_lp = X.Low.values[t0.astype('int') + np.arange(0, n_steps + 1)]
+        ys_gx = X.Green_X.values[t0.astype('int') + np.arange(0, n_steps + 1)]
+        ys_rx = X.Red_X.values[t0.astype('int') + np.arange(0, n_steps + 1)]
+        ys_volume = X.Volume.values[t0.astype('int') + np.arange(0, n_steps + 1)]
+        ys_macd = X.MACD.values[t0.astype('int') + np.arange(0, n_steps + 1)]
         return np.c_[ys_cp,
                        ys_op,
                        ys_hp,
@@ -173,4 +193,5 @@ class MomentumEnv(gym.Env):
                        ys_volume,
                        ys_macd,
                        ys_gx,
-                       ys_rx]
+                       ys_rx
+        ]
