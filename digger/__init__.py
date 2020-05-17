@@ -35,6 +35,6 @@ register(
 )
 
 register(
-    id='MomentumEnv-v0',
+    id='MomentumEnv-v1',
     entry_point='digger.envs:MomentumEnv2',
 )
