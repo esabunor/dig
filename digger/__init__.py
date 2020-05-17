@@ -25,7 +25,7 @@ register(
     entry_point='digger.envs:BSEnvV2',
 )
 register(
-    id='BSEnvTester-v1',
+    id='BSEnvTester-v0',
     entry_point='digger.envs:BSEnvTester',
 )
 
